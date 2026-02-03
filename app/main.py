@@ -1,7 +1,7 @@
 from fastapi import FastAPI
+from app.routers import post, user
 
-app = FastAPI(title="Mini Social API")
+app = FastAPI()
 
-@app.get("/health")
-async def health_check():
-    return {"status": "ok"}
+app.include_router(user.router)
+app.include_router(post.router)
