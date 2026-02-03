@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from .user import Base
+
+from app.db.base import Base
 
 
 class Post(Base):
@@ -13,4 +14,5 @@ class Post(Base):
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    author = relationship("User")
+    author = relationship("User", back_populates="posts")
+    likes = relationship("Like", back_populates="post", cascade="all, delete")

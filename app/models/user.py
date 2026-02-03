@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import relationship
 from datetime import datetime
 
-Base = declarative_base()
+from app.db.base import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -11,3 +12,6 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    posts = relationship("Post", back_populates="author", cascade="all, delete")
+    likes = relationship("Like", back_populates="user", cascade="all, delete")
