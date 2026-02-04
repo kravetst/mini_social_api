@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead
@@ -7,13 +9,15 @@ from app.schemas.user import UserCreate, UserRead
 router = APIRouter(prefix="/users", tags=["users"])
 
 @router.post("/", response_model=UserRead)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     db_user = User(**user.dict())
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user
 
 @router.get("/", response_model=list[UserRead])
-def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
+async def get_users(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User))
+    users = result.scalars().all()
+    return users
