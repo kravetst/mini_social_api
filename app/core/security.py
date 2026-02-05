@@ -1,15 +1,21 @@
-from passlib.context import CryptContext
+
 from datetime import datetime, timedelta
 import jwt
+
+
+from argon2 import PasswordHasher
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ph = PasswordHasher()
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+def hash_password(password: str) -> str:
+    return ph.hash(password)
 
-def verify_password(password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(password, hashed_password)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return ph.verify(hashed_password, plain_password)
+    except:
+        return False
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
