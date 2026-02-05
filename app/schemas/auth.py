@@ -1,12 +1,12 @@
-from pydantic import BaseModel, EmailStr, constr
+from pydantic import BaseModel, EmailStr
 
 class RegisterSchema(BaseModel):
     email: EmailStr
-    password: constr(min_length=6, max_length=72)
+    password: str
 
 class LoginSchema(BaseModel):
     email: EmailStr
-    password: constr(max_length=72)
+    password: str
 
 class TokenSchema(BaseModel):
     access_token: str
