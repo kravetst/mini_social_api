@@ -2,6 +2,10 @@ from app.repositories.post import PostRepository
 from app.repositories.like import LikeRepository
 from app.schemas.post import PostRead
 from app.schemas.user import UserRead
+from app.core.redis import get_redis
+import json
+
+CACHE_TTL = 30  # cache for 30 seconds
 
 
 class PostService:
@@ -14,6 +18,11 @@ class PostService:
 
     async def create_post(self, title: str, content: str, author_id: int) -> PostRead:
         post = await self.post_repo.create(title, content, author_id)
+        # invalidate cache after creating post
+        redis = get_redis()
+        keys = await redis.keys("posts:*")
+        if keys:
+            await redis.delete(*keys)
         return PostRead(
             id=post.id,
             title=post.title,
@@ -32,7 +41,24 @@ class PostService:
         sort: str = "created_at",
         order: str = "desc",
     ) -> list[PostRead]:
+
+        redis = get_redis()
+        cache_key = f"posts:{limit}:{offset}:{author_id}:{search}:{sort}:{order}"
+
+        cached = await redis.get(cache_key)
+        if cached:
+            # returning data from cache
+            posts_data = json.loads(cached)
+            return [PostRead(**p) for p in posts_data]
+
+        # if there is no cache, take from the DB
         posts = await self.post_repo.list(limit, offset, author_id, search, sort, order)
+
+        # stored in Redis
+        await redis.set(
+            cache_key, json.dumps([p.model_dump() for p in posts]), ex=CACHE_TTL
+        )
+
         return posts
 
     async def get_post_by_id(self, post_id: int) -> PostRead | None:
