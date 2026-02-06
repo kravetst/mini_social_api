@@ -21,28 +21,13 @@ class PostRepository:
 
     async def get_by_id(self, post_id: int) -> Post | None:
         stmt = (
-            select(
-                Post,
-                User.id.label("author_id"),
-                User.email.label("author_email"),
-                func.count(Like.id).label("likes_count"),
-            )
-            .join(User, Post.author_id == User.id)
-            .outerjoin(Like, Like.post_id == Post.id)
+            select(Post)
+            .options(selectinload(Post.author))
             .where(Post.id == post_id)
-            .group_by(Post.id, User.id)
         )
 
         result = await self.db.execute(stmt)
-        row = result.first()
-        if not row:
-            return None
-
-        post, author_id, author_email, likes_count = row
-
-        # adding attributes to Post
-        post.likes_count = likes_count
-        post.author = type("Author", (), {"id": author_id, "email": author_email})()
+        post = result.scalar_one_or_none()
         return post
 
     async def list(
@@ -54,7 +39,6 @@ class PostRepository:
         sort: str = "created_at",
         order: str = "desc",
     ) -> list[PostRead]:
-        # a basic query with join on author and left join on likes
         stmt = (
             select(
                 Post,
@@ -87,7 +71,6 @@ class PostRepository:
         result = await self.db.execute(stmt)
         rows = result.all()
 
-        # forming the Pydantic PostRead list
         posts_list: list[PostRead] = []
         for post, author_id, author_email, likes_count in rows:
             posts_list.append(

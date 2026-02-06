@@ -18,7 +18,6 @@ class PostService:
 
     async def create_post(self, title: str, content: str, author_id: int) -> PostRead:
         post = await self.post_repo.create(title, content, author_id)
-        # invalidate cache after creating post
         redis = get_redis()
         keys = await redis.keys("posts:*")
         if keys:
@@ -47,16 +46,17 @@ class PostService:
 
         cached = await redis.get(cache_key)
         if cached:
-            # returning data from cache
             posts_data = json.loads(cached)
             return [PostRead(**p) for p in posts_data]
 
-        # if there is no cache, take from the DB
         posts = await self.post_repo.list(limit, offset, author_id, search, sort, order)
 
-        # stored in Redis
         await redis.set(
-            cache_key, json.dumps([p.model_dump() for p in posts]), ex=CACHE_TTL
+            cache_key,
+            json.dumps(
+                [p.model_dump(mode="json") for p in posts]
+            ),
+            ex=CACHE_TTL
         )
 
         return posts
